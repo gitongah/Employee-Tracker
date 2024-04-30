@@ -3,6 +3,7 @@
 const inquirer = require('inquirer');
 const { default: Choices } = require('inquirer/lib/objects/choices');
 require('dotenv').config();
+const logo = require('asciiart-logo');
 
 // Import and require Pool (node-postgres)
 const { Pool } = require('pg');
@@ -13,16 +14,31 @@ const PORT = process.env.PORT || 3001;
 
 const pool = new Pool(
   {
-    user: 'postgres',
-    password: 'Valentino1234',
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
     host: 'localhost',
-    database: 'employee_db',
-    port: 5434
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT
     
   },
+
   console.log(`Connected to the employee_db database.`)
 )
 pool.connect();
+
+console.log(
+      logo({
+          name: 'Employee Management System',
+          lineChars: 10,
+          padding: 2,
+          margin: 3,
+          borderColor: 'grey',
+          logoColor: 'skyblue',
+          textColor: 'skyblue',
+      })
+      .render()
+  );
+    console.log("Welcome to our employee database! ")
 
 function initializeApplication(){
   inquirer.prompt({
@@ -64,6 +80,7 @@ function initializeApplication(){
       updateEmployeeRole();
     }
     else{
+        
       quit();
     }
   })
@@ -75,7 +92,18 @@ initializeApplication();
 
 //function to exit the program
 function quit(){
-  console.log('Goodbye');
+  console.log("Thanks for using Employee Management System. ")
+          console.log(
+            logo({
+                name: 'Have a nice day! Bye! ',
+                lineChars: 10,
+                padding: 2,
+                margin: 3,
+                borderColor: 'grey',
+                logoColor: 'skyblue',
+                textColor: 'skyblue',
+            })
+            .render())
   process.exit()
 }
 
@@ -141,8 +169,7 @@ function addDepartment(){
         initializeApplication();
         console.log('\n');
       })
-
-    })
+   })
 }
 //function to add new employess
 function addEmployee(){
@@ -265,22 +292,39 @@ function addRole(){
     })
   })
 }
+function updateEmployeeRole(){
+  pool.query(`SELECT * FROM employee`,(error, employee_result)=>{
+    if(error) throw error;
+    pool.query(`SELECT * FROM role`,(error,role_result)=>{
+      if(error) throw error;
+          inquirer.prompt([
+      {
+        name: 'employee',
+        type: 'list',
+        message: 'Which employee would you like to update?',
+        choices: ()=> employee_result.rows.map((employee_result)=> employee_result.first_name +''+ employee_result.last_name),
+      },
+      {
+        name:'role',
+        type:'list',
+        message: 'which role do you want to assign the selected  employee?',
+        choices: ()=> role_result.rows.map((role_result)=>role_result.title),
+      },
+    ])
+    .then((answer)=>{
+      const roleId = role_result.rows.filter((role_result) => role_result.title === answer.role)[0].id;
+      const empId = employee_result.rows.filter((employee_result) => employee_result.first_name + "" + employee_result.last_name === answer.employee)[0].id;
+      pool.query(`UPDATE employee SET role_id =$1 WHERE id = $2`,
+      [ roleId, empId],
+    (error)=>{
+      if(error) throw error;
+      console.log(answer.employee +" role is successfully updated");
+      initializeApplication()
+    }
+    )
+    })
+    })
 
+  })
 
-
-//  let employee = {
-//             mangeer_id: answer.managerId,
-//             role_id: answer.roleId,
-//             first_name: answer.first_name,
-//             last_name: answer.last_name
-//               }
-// //the sql query to insert the data
-//         let sql = `INSERT INTO employee(first_name, last_name, role_id, manager_id)
-//               VALUES ($1, $2, $3, $4)`;
-//         pool.query(sql,
-//           [
-//             employee.first_name,
-//             employee.last_name,
-//             employee.role_id,
-//             employee.mangeer_id
-//           ],
+}
