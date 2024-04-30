@@ -84,7 +84,9 @@ function viewAllDepartments(){
   const sql =`SELECT department.id, department.name FROM department`;
   pool.query(sql, function(error,{rows}){
     console.table(rows);
-    initializeApplication(),'\n';
+    console.log('\n');
+    initializeApplication();
+    console.log('\n');
   })
 }
 //functiont to show all the roles in the table
@@ -96,7 +98,9 @@ function viewAllRoles(){
     ON role.department_id = department.id ORDER BY role.id`;
   pool.query(sql, function(error,{rows}){
     console.table(rows);
-    initializeApplication(),'\n';
+    console.log('\n');
+    initializeApplication();
+    console.log('\n');
   })
 
 }
@@ -111,15 +115,99 @@ function viewAllRoles(){
     ON employee.role_id = role.id 
     JOIN department
     ON role.department_id = department.id
-    JOIN employee manager ON employee.manager_id = manager.id
+    JOIN employee manager 
+    ON employee.manager_id = manager.id
 
     `;
   pool.query(sql, function(error,{rows}){
     console.table(rows);
-    initializeApplication(),'\n';
+    console.log('\n');
+    initializeApplication();
+    console.log('\n');
   })
 
  }
+// function to add a department
+function addDepartment(){
+  inquirer.prompt({
+      type: 'input',
+      message: 'Which department would you like to add?',
+      name: 'department'
+    }).then((answer)=>{
+      const sql =`INSERT INTO department (name) VALUES($1)`
+      pool.query(sql,[answer.department], function(error,{rows}){
+        console.log('New department has been added');
+        console.log('\n');
+        initializeApplication();
+        console.log('\n');
+      })
 
+    })
+}
+//function to add new employess
+function addEmployee(){
+  //geting the role titles
+  pool.query(`SELECT DISTINCT title, id FROM role`,(error, role_result)=>{
+    if(error) throw error;
+  // getting the managers last and first names
+  pool.query(`SELECT DISTINCT CONCAT(manager.first_name, '', manager.last_name) AS manager_name, manager.id
+    FROM employee
+    JOIN employee manager 
+    ON employee.manager_id = manager.id`, (error, manager_result)=>{
+      //if there is a error throw error
+      if(error) throw error;
+      //else ask user for inputs for adding the new employee
+      inquirer.prompt([
+        {
+          name: "first_name",
+          type: "input",
+          message: "What is the employee's first name?",
+        },
+        {
+          name: "last_name",
+          type: "input",
+          message: "What is the employee's last name?",
+        },
+        {
+          name: "role",
+          type: "list",
+          message: "What is the employee's role?",
+          choices: () =>
+          role_result.rows.map((role_result) => role_result.title),
+        },
+        {
+          name: 'manager',
+          type: 'list',
+          message: "Who is the employee's manager?",
+          choices: () =>
+          manager_result.rows.map((manager_result) => manager_result.manager_name),
+      }])
+      .then((answer)=>{
+        const managerId = manager_result.rows.filter((manager_result)=>manager_result.manager_name === answer.manager)[0].id;
+        const roleId = role_result.rows.filter((role_result)=> role_result.title === answer.role)[0].id;
 
-
+        let employee = {
+            mangeer_id: answer.managerId,
+            role_id: answer.roleId,
+            first_name: answer.first_name,
+            last_name: answer.last_name
+              }
+//the sql query to insert the data
+        let sql = `INSERT INTO employee(first_name, last_name, role_id, manager_id)
+              VALUES ($1, $2, $3, $4)`;
+        pool.query(sql,
+          [
+            employee.first_name,
+            employee.last_name,
+            employee.role_id,
+            employee.mangeer_id
+          ],
+          (error)=>{
+          if(error) throw error;
+          console.log(answer.first_name + ' ' + answer.last_name + " is successfully added!");
+          initializeApplication();
+        })
+      })
+    })
+  })
+}
