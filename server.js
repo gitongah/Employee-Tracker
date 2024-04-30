@@ -187,8 +187,8 @@ function addEmployee(){
         const roleId = role_result.rows.filter((role_result)=> role_result.title === answer.role)[0].id;
 
         let employee = {
-            mangeer_id: answer.managerId,
-            role_id: answer.roleId,
+            mangeer_id: managerId,
+            role_id: roleId,
             first_name: answer.first_name,
             last_name: answer.last_name
               }
@@ -211,3 +211,76 @@ function addEmployee(){
     })
   })
 }
+//function to add new role to the database
+function addRole(){
+  pool.query(`SELECT DISTINCT * FROM department`,(error,department_result)=>{
+    if(error) throw error;
+    inquirer.prompt([
+      {
+        name:'role',
+        type:'input',
+        message: 'What is the title of the role you like to add?',
+      },
+      {
+        name:'salary',
+        type:'input',
+        message: 'What is the salary of the role? (Must be a number without separating commas)',
+        validate: input =>{
+          if(isNaN(input)){
+            console.log('please enter a number')
+            return false;
+          }else{
+            return true;
+          }
+        }
+      },
+      {
+        name:'department',
+        type:'list',
+        message:'What department does the role belong to:',
+        choices: ()=>department_result.rows.map((department_result)=>department_result.name)
+      }
+    ]).then((answer)=>{
+      const departmentId = department_result.rows.filter((department_result)=> department_result.name === answer.department)[0].id;
+
+      let role ={
+        title:answer.role,
+        salary:answer.salary,
+        department_id:departmentId
+      }
+      const sql= `INSERT INTO role(title, salary, department_id)
+                  VALUES ($1, $2, $3)`;
+      pool.query(sql,
+        [
+          role.title,
+          role.salary,
+          role.department_id
+
+        ],
+          function (error){
+            if(error) throw error;
+            console.log(answer.role + ' Successfully add to role under ' + answer.department);
+          initializeApplication();
+        })
+    })
+  })
+}
+
+
+
+//  let employee = {
+//             mangeer_id: answer.managerId,
+//             role_id: answer.roleId,
+//             first_name: answer.first_name,
+//             last_name: answer.last_name
+//               }
+// //the sql query to insert the data
+//         let sql = `INSERT INTO employee(first_name, last_name, role_id, manager_id)
+//               VALUES ($1, $2, $3, $4)`;
+//         pool.query(sql,
+//           [
+//             employee.first_name,
+//             employee.last_name,
+//             employee.role_id,
+//             employee.mangeer_id
+//           ],
